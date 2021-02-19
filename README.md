@@ -15,7 +15,7 @@ A reimplementation of the base64 and hexadecimal codecs from libsodium and libhy
 ```rust
 use ct_codecs::{Base64UrlSafe, Decoder, Encoder};
 
-let encoded = Base64UrlSafe::encode_to_string(x).unwrap();
-let decoded = Base64UrlSafe::decode_to_vec(encoded, None).unwrap();
+let encoded = Base64UrlSafe::encode_to_string(x)?;
+let decoded = Base64UrlSafe::decode_to_vec(encoded, None)?;
 ```
 
