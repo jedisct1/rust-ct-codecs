@@ -218,9 +218,9 @@ impl Base64Impl {
         if acc_len > 4 || (acc & ((1u16 << acc_len).wrapping_sub(1))) != 0 {
             return Err(Error::InvalidInput);
         }
+        let padding_len = acc_len / 2;
         if let Some(premature_end) = premature_end {
             let remaining = if variant as u16 & VariantMask::NoPadding as u16 == 0 {
-                let padding_len = acc_len / 2;
                 Self::skip_padding(&b64[premature_end..], padding_len, ignore)?
             } else {
                 &b64[premature_end..]
@@ -239,6 +239,8 @@ impl Base64Impl {
                     }
                 }
             }
+        } else if variant as u16 & VariantMask::NoPadding as u16 == 0 && padding_len != 0 {
+            return Err(Error::InvalidInput);
         }
         Ok(&bin[..bin_pos])
     }
@@ -350,6 +352,17 @@ fn test_base64() {
     assert_eq!(b64, expected);
     let bin2 = Base64::decode_to_vec(&b64, None).unwrap();
     assert_eq!(bin, &bin2[..]);
+}
+
+#[cfg(feature = "std")]
+#[test]
+fn test_base64_mising_padding() {
+    let missing_padding = "AA";
+    assert!(Base64::decode_to_vec(&missing_padding, None).is_err());
+    assert!(Base64NoPadding::decode_to_vec(&missing_padding, None).is_ok());
+    let missing_padding = "AAA";
+    assert!(Base64::decode_to_vec(&missing_padding, None).is_err());
+    assert!(Base64NoPadding::decode_to_vec(&missing_padding, None).is_ok());
 }
 
 #[test]
