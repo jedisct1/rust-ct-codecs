@@ -1,6 +1,6 @@
 [package]
 name = "ct-codecs"
-version = "1.0.0"
+version = "1.1.0"
 authors = ["Frank Denis <github@pureftpd.org>"]
 edition = "2018"
 description = "Constant-time hex and base64 codecs from libsodium reimplemented in Rust"
