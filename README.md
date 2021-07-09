@@ -8,7 +8,7 @@ A reimplementation of the base64 and hexadecimal codecs from libsodium and libhy
 - Supports characters to be ignored by the decoder
 - Zero dependencies, `no_std` friendly.
 
-## [API documentation](https://docs.rs/ct-codecs)
+## [crates.io](https://crates.io/crates/ct-codecs)
 
 ## Example usage
 
