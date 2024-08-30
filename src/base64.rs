@@ -376,3 +376,14 @@ fn test_base64_no_std() {
     let bin2 = Base64::decode(&mut bin2, b64, None).unwrap();
     assert_eq!(bin, bin2);
 }
+
+#[test]
+fn test_base64_invalid_padding() {
+    let valid_padding = "AA==";
+    assert_eq!(Base64::decode_to_vec(valid_padding, None), Ok(vec![0u8; 1]));
+    let invalid_padding = "AA=";
+    assert_eq!(
+        Base64::decode_to_vec(invalid_padding, None),
+        Err(Error::InvalidInput)
+    );
+}
