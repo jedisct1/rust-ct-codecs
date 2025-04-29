@@ -1,14 +1,76 @@
 use crate::error::*;
 use crate::{Decoder, Encoder};
 
+/// Hexadecimal encoder and decoder implementation.
+///
+/// Provides constant-time encoding and decoding of binary data to and from
+/// hexadecimal representation. The implementation uses only lowercase
+/// hexadecimal characters (0-9, a-f) for encoding.
+///
+/// # Security
+///
+/// All operations run in constant time relative to input length, making
+/// this implementation suitable for handling sensitive cryptographic data.
+///
+/// # Examples
+///
+/// ```
+/// use ct_codecs::{Hex, Encoder, Decoder};
+///
+/// let data = b"Hello";
+/// # let result = 
+/// // Encode binary data to hex
+/// let encoded = Hex::encode_to_string(data)?;
+/// assert_eq!(encoded, "48656c6c6f");
+///
+/// // Decode hex back to binary
+/// let decoded = Hex::decode_to_vec(&encoded, None)?;
+/// assert_eq!(decoded, data);
+///
+/// // Working with preallocated buffers (useful for no_std)
+/// let mut hex_buf = [0u8; 10];
+/// let hex = Hex::encode(&mut hex_buf, data)?;
+/// assert_eq!(hex, b"48656c6c6f");
+///
+/// let mut bin_buf = [0u8; 5];
+/// let bin = Hex::decode(&mut bin_buf, hex, None)?;
+/// assert_eq!(bin, data);
+/// # Ok::<(), ct_codecs::Error>(())
+/// ```
 pub struct Hex;
 
 impl Encoder for Hex {
+    /// Calculates the encoded length for a hexadecimal representation.
+    ///
+    /// The encoded length is always twice the binary length, as each byte
+    /// is represented by two hexadecimal characters.
+    ///
+    /// # Arguments
+    ///
+    /// * `bin_len` - The length of the binary input in bytes
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(usize)` - The required length for the encoded output
+    /// * `Err(Error::Overflow)` - If the calculation would overflow
     #[inline]
     fn encoded_len(bin_len: usize) -> Result<usize, Error> {
         bin_len.checked_mul(2).ok_or(Error::Overflow)
     }
 
+    /// Encodes binary data into a hexadecimal representation.
+    ///
+    /// The encoding is performed in constant time relative to the input length.
+    ///
+    /// # Arguments
+    ///
+    /// * `hex` - Mutable buffer to store the encoded output
+    /// * `bin` - Binary input data to encode
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(&[u8])` - A slice of the encoded buffer containing the hex data
+    /// * `Err(Error::Overflow)` - If the output buffer is too small
     fn encode<IN: AsRef<[u8]>>(hex: &mut [u8], bin: IN) -> Result<&[u8], Error> {
         let bin = bin.as_ref();
         let bin_len = bin.len();
@@ -28,6 +90,22 @@ impl Encoder for Hex {
 }
 
 impl Decoder for Hex {
+    /// Decodes hexadecimal data back into its binary representation.
+    ///
+    /// The decoding is performed in constant time relative to the input length.
+    /// Both uppercase and lowercase hexadecimal characters are accepted.
+    ///
+    /// # Arguments
+    ///
+    /// * `bin` - Mutable buffer to store the decoded output
+    /// * `hex` - Hexadecimal input data to decode
+    /// * `ignore` - Optional set of characters to ignore during decoding
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(&[u8])` - A slice of the binary buffer containing the decoded data
+    /// * `Err(Error::Overflow)` - If the output buffer is too small
+    /// * `Err(Error::InvalidInput)` - If the input contains invalid characters or has odd length
     fn decode<'t, IN: AsRef<[u8]>>(
         bin: &'t mut [u8],
         hex: IN,

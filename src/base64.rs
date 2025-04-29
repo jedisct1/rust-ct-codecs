@@ -246,9 +246,112 @@ impl Base64Impl {
     }
 }
 
+/// Standard Base64 encoder and decoder with padding.
+///
+/// This implementation follows the standard Base64 encoding as defined in RFC 4648,
+/// and includes padding characters ('=') when needed.
+///
+/// # Standard Base64 Alphabet
+///
+/// The standard Base64 alphabet uses characters:
+/// - 'A' to 'Z' (26 characters)
+/// - 'a' to 'z' (26 characters)
+/// - '0' to '9' (10 characters)
+/// - '+' and '/' (2 characters)
+/// - '=' (padding character)
+///
+/// # Examples
+///
+/// ```
+/// use ct_codecs::{Base64, Encoder, Decoder};
+///
+/// let data = b"Hello, world!";
+/// # let result = 
+/// let encoded = Base64::encode_to_string(data)?;
+/// assert_eq!(encoded, "SGVsbG8sIHdvcmxkIQ==");
+///
+/// let decoded = Base64::decode_to_vec(&encoded, None)?;
+/// assert_eq!(decoded, data);
+/// # Ok::<(), ct_codecs::Error>(())
+/// ```
 pub struct Base64;
+
+/// Standard Base64 encoder and decoder without padding.
+///
+/// This implementation follows the standard Base64 encoding as defined in RFC 4648,
+/// but omits padding characters ('=').
+///
+/// # Examples
+///
+/// ```
+/// use ct_codecs::{Base64NoPadding, Encoder, Decoder};
+///
+/// let data = b"Hello, world!";
+/// # let result = 
+/// let encoded = Base64NoPadding::encode_to_string(data)?;
+/// assert_eq!(encoded, "SGVsbG8sIHdvcmxkIQ");
+///
+/// let decoded = Base64NoPadding::decode_to_vec(&encoded, None)?;
+/// assert_eq!(decoded, data);
+/// # Ok::<(), ct_codecs::Error>(())
+/// ```
 pub struct Base64NoPadding;
+
+/// URL-safe Base64 encoder and decoder with padding.
+///
+/// This implementation follows the URL-safe Base64 encoding variant as defined in RFC 4648.
+/// It replaces the '+' and '/' characters with '-' and '_' to make the output URL and
+/// filename safe. Padding characters ('=') are included when needed.
+///
+/// # URL-safe Base64 Alphabet
+///
+/// The URL-safe Base64 alphabet uses characters:
+/// - 'A' to 'Z' (26 characters)
+/// - 'a' to 'z' (26 characters)
+/// - '0' to '9' (10 characters)
+/// - '-' and '_' (2 characters)
+/// - '=' (padding character)
+///
+/// # Examples
+///
+/// ```
+/// use ct_codecs::{Base64UrlSafe, Encoder, Decoder};
+///
+/// let data = b"Hello, world!";
+/// # let result = 
+/// let encoded = Base64UrlSafe::encode_to_string(data)?;
+/// assert_eq!(encoded, "SGVsbG8sIHdvcmxkIQ==");
+///
+/// // If the input contains characters that would be escaped in URLs
+/// let binary_data = &[251, 239, 190, 222];
+/// let encoded = Base64UrlSafe::encode_to_string(binary_data)?;
+/// assert_eq!(encoded, "---e3g==");
+/// # Ok::<(), ct_codecs::Error>(())
+/// ```
 pub struct Base64UrlSafe;
+
+/// URL-safe Base64 encoder and decoder without padding.
+///
+/// This implementation follows the URL-safe Base64 encoding variant as defined in RFC 4648,
+/// but omits padding characters ('='). This is particularly useful for URLs, where the
+/// padding character may need to be percent-encoded.
+///
+/// # Examples
+///
+/// ```
+/// use ct_codecs::{Base64UrlSafeNoPadding, Encoder, Decoder};
+///
+/// let data = b"Hello, world!";
+/// # let result = 
+/// let encoded = Base64UrlSafeNoPadding::encode_to_string(data)?;
+/// assert_eq!(encoded, "SGVsbG8sIHdvcmxkIQ");
+///
+/// // With binary data containing characters that would be escaped in URLs
+/// let binary_data = &[251, 239, 190, 222];
+/// let encoded = Base64UrlSafeNoPadding::encode_to_string(binary_data)?;
+/// assert_eq!(encoded, "---e3g");
+/// # Ok::<(), ct_codecs::Error>(())
+/// ```
 pub struct Base64UrlSafeNoPadding;
 
 impl Encoder for Base64 {
