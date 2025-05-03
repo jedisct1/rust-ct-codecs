@@ -265,14 +265,16 @@ impl Base64Impl {
 /// ```
 /// use ct_codecs::{Base64, Encoder, Decoder};
 ///
-/// let data = b"Hello, world!";
-/// # let result = 
-/// let encoded = Base64::encode_to_string(data)?;
-/// assert_eq!(encoded, "SGVsbG8sIHdvcmxkIQ==");
+/// fn example() -> Result<(), ct_codecs::Error> {
+///     let data = b"Hello, world!";
+///     let encoded = Base64::encode_to_string(data)?;
+///     assert_eq!(encoded, "SGVsbG8sIHdvcmxkIQ==");
 ///
-/// let decoded = Base64::decode_to_vec(&encoded, None)?;
-/// assert_eq!(decoded, data);
-/// # Ok::<(), ct_codecs::Error>(())
+///     let decoded = Base64::decode_to_vec(&encoded, None)?;
+///     assert_eq!(decoded, data);
+///     Ok(())
+/// }
+/// # example().unwrap();
 /// ```
 pub struct Base64;
 
@@ -286,14 +288,16 @@ pub struct Base64;
 /// ```
 /// use ct_codecs::{Base64NoPadding, Encoder, Decoder};
 ///
-/// let data = b"Hello, world!";
-/// # let result = 
-/// let encoded = Base64NoPadding::encode_to_string(data)?;
-/// assert_eq!(encoded, "SGVsbG8sIHdvcmxkIQ");
+/// fn example() -> Result<(), ct_codecs::Error> {
+///     let data = b"Hello, world!";
+///     let encoded = Base64NoPadding::encode_to_string(data)?;
+///     assert_eq!(encoded, "SGVsbG8sIHdvcmxkIQ");
 ///
-/// let decoded = Base64NoPadding::decode_to_vec(&encoded, None)?;
-/// assert_eq!(decoded, data);
-/// # Ok::<(), ct_codecs::Error>(())
+///     let decoded = Base64NoPadding::decode_to_vec(&encoded, None)?;
+///     assert_eq!(decoded, data);
+///     Ok(())
+/// }
+/// # example().unwrap();
 /// ```
 pub struct Base64NoPadding;
 
@@ -317,16 +321,18 @@ pub struct Base64NoPadding;
 /// ```
 /// use ct_codecs::{Base64UrlSafe, Encoder, Decoder};
 ///
-/// let data = b"Hello, world!";
-/// # let result = 
-/// let encoded = Base64UrlSafe::encode_to_string(data)?;
-/// assert_eq!(encoded, "SGVsbG8sIHdvcmxkIQ==");
+/// fn example() -> Result<(), ct_codecs::Error> {
+///     let data = b"Hello, world!";
+///     let encoded = Base64UrlSafe::encode_to_string(data)?;
+///     assert_eq!(encoded, "SGVsbG8sIHdvcmxkIQ==");
 ///
-/// // If the input contains characters that would be escaped in URLs
-/// let binary_data = &[251, 239, 190, 222];
-/// let encoded = Base64UrlSafe::encode_to_string(binary_data)?;
-/// assert_eq!(encoded, "---e3g==");
-/// # Ok::<(), ct_codecs::Error>(())
+///     // If the input contains characters that would be escaped in URLs
+///     let binary_data = &[251, 239, 190, 222];
+///     let encoded = Base64UrlSafe::encode_to_string(binary_data)?;
+///     assert_eq!(encoded, "----3g==");
+///     Ok(())
+/// }
+/// # example().unwrap();
 /// ```
 pub struct Base64UrlSafe;
 
@@ -341,16 +347,18 @@ pub struct Base64UrlSafe;
 /// ```
 /// use ct_codecs::{Base64UrlSafeNoPadding, Encoder, Decoder};
 ///
-/// let data = b"Hello, world!";
-/// # let result = 
-/// let encoded = Base64UrlSafeNoPadding::encode_to_string(data)?;
-/// assert_eq!(encoded, "SGVsbG8sIHdvcmxkIQ");
+/// fn example() -> Result<(), ct_codecs::Error> {
+///     let data = b"Hello, world!";
+///     let encoded = Base64UrlSafeNoPadding::encode_to_string(data)?;
+///     assert_eq!(encoded, "SGVsbG8sIHdvcmxkIQ");
 ///
-/// // With binary data containing characters that would be escaped in URLs
-/// let binary_data = &[251, 239, 190, 222];
-/// let encoded = Base64UrlSafeNoPadding::encode_to_string(binary_data)?;
-/// assert_eq!(encoded, "---e3g");
-/// # Ok::<(), ct_codecs::Error>(())
+///     // With binary data containing characters that would be escaped in URLs
+///     let binary_data = &[251, 239, 190, 222];
+///     let encoded = Base64UrlSafeNoPadding::encode_to_string(binary_data)?;
+///     assert_eq!(encoded, "----3g");
+///     Ok(())
+/// }
+/// # example().unwrap();
 /// ```
 pub struct Base64UrlSafeNoPadding;
 

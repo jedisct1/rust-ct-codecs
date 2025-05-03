@@ -19,11 +19,13 @@
 //! ```
 //! use ct_codecs::{Base64, Encoder};
 //!
-//! let data = b"Hello, world!";
-//! # let result = 
-//! let encoded = Base64::encode_to_string(data)?;
-//! assert_eq!(encoded, "SGVsbG8sIHdvcmxkIQ==");
-//! # Ok::<(), ct_codecs::Error>(())
+//! fn example() -> Result<(), ct_codecs::Error> {
+//!     let data = b"Hello, world!";
+//!     let encoded = Base64::encode_to_string(data)?;
+//!     assert_eq!(encoded, "SGVsbG8sIHdvcmxkIQ==");
+//!     Ok(())
+//! }
+//! # example().unwrap();
 //! ```
 //!
 //! ### Base64 Decoding
@@ -31,11 +33,13 @@
 //! ```
 //! use ct_codecs::{Base64, Decoder};
 //!
-//! let encoded = "SGVsbG8sIHdvcmxkIQ==";
-//! # let result = 
-//! let decoded = Base64::decode_to_vec(encoded, None)?;
-//! assert_eq!(decoded, b"Hello, world!");
-//! # Ok::<(), ct_codecs::Error>(())
+//! fn example() -> Result<(), ct_codecs::Error> {
+//!     let encoded = "SGVsbG8sIHdvcmxkIQ==";
+//!     let decoded = Base64::decode_to_vec(encoded, None)?;
+//!     assert_eq!(decoded, b"Hello, world!");
+//!     Ok(())
+//! }
+//! # example().unwrap();
 //! ```
 //!
 //! ### Hexadecimal Encoding/Decoding
@@ -43,12 +47,14 @@
 //! ```
 //! use ct_codecs::{Hex, Encoder, Decoder};
 //!
-//! let data = b"Hello, world!";
-//! # let result = 
-//! let encoded = Hex::encode_to_string(data)?;
-//! let decoded = Hex::decode_to_vec(&encoded, None)?;
-//! assert_eq!(decoded, data);
-//! # Ok::<(), ct_codecs::Error>(())
+//! fn example() -> Result<(), ct_codecs::Error> {
+//!     let data = b"Hello, world!";
+//!     let encoded = Hex::encode_to_string(data)?;
+//!     let decoded = Hex::decode_to_vec(&encoded, None)?;
+//!     assert_eq!(decoded, data);
+//!     Ok(())
+//! }
+//! # example().unwrap();
 //! ```
 //!
 //! ### No-std Usage with Pre-allocated Buffers
@@ -56,15 +62,17 @@
 //! ```
 //! use ct_codecs::{Base64, Encoder, Decoder};
 //!
-//! let data = b"Hello, world!";
-//! # let result = 
-//! let mut encoded_buf = [0u8; 20]; // Must be large enough
-//! let encoded = Base64::encode(&mut encoded_buf, data)?;
-//!
-//! let mut decoded_buf = [0u8; 13]; // Must be large enough
-//! let decoded = Base64::decode(&mut decoded_buf, encoded, None)?;
-//! assert_eq!(decoded, data);
-//! # Ok::<(), ct_codecs::Error>(())
+//! fn example() -> Result<(), ct_codecs::Error> {
+//!     let data = b"Hello, world!";
+//!     let mut encoded_buf = [0u8; 20]; // Must be large enough
+//!     let encoded = Base64::encode(&mut encoded_buf, data)?;
+//!     
+//!     let mut decoded_buf = [0u8; 13]; // Must be large enough
+//!     let decoded = Base64::decode(&mut decoded_buf, encoded, None)?;
+//!     assert_eq!(decoded, data);
+//!     Ok(())
+//! }
+//! # example().unwrap();
 //! ```
 
 #![cfg_attr(not(feature = "std"), no_std)]

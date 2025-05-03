@@ -17,25 +17,28 @@ use crate::{Decoder, Encoder};
 /// ```
 /// use ct_codecs::{Hex, Encoder, Decoder};
 ///
-/// let data = b"Hello";
-/// # let result = 
-/// // Encode binary data to hex
-/// let encoded = Hex::encode_to_string(data)?;
-/// assert_eq!(encoded, "48656c6c6f");
+/// fn example() -> Result<(), ct_codecs::Error> {
+///     let data = b"Hello";
 ///
-/// // Decode hex back to binary
-/// let decoded = Hex::decode_to_vec(&encoded, None)?;
-/// assert_eq!(decoded, data);
+///     // Encode binary data to hex
+///     let encoded = Hex::encode_to_string(data)?;
+///     assert_eq!(encoded, "48656c6c6f");
 ///
-/// // Working with preallocated buffers (useful for no_std)
-/// let mut hex_buf = [0u8; 10];
-/// let hex = Hex::encode(&mut hex_buf, data)?;
-/// assert_eq!(hex, b"48656c6c6f");
+///     // Decode hex back to binary
+///     let decoded = Hex::decode_to_vec(&encoded, None)?;
+///     assert_eq!(decoded, data);
 ///
-/// let mut bin_buf = [0u8; 5];
-/// let bin = Hex::decode(&mut bin_buf, hex, None)?;
-/// assert_eq!(bin, data);
-/// # Ok::<(), ct_codecs::Error>(())
+///     // Working with preallocated buffers (useful for no_std)
+///     let mut hex_buf = [0u8; 10];
+///     let hex = Hex::encode(&mut hex_buf, data)?;
+///     assert_eq!(hex, b"48656c6c6f");
+///
+///     let mut bin_buf = [0u8; 5];
+///     let bin = Hex::decode(&mut bin_buf, hex, None)?;
+///     assert_eq!(bin, data);
+///     Ok(())
+/// }
+/// # example().unwrap();
 /// ```
 pub struct Hex;
 
