@@ -1,17 +1,24 @@
 # CT-Codecs
 
-A Rust implementation of constant-time Base64 and Hexadecimal codecs, originally from libsodium and libhydrogen.
+A Rust implementation of constant-time Base64, Base32, and Hexadecimal codecs for cryptographic applications, originally derived from libsodium and libhydrogen.
 
 [![Crates.io](https://img.shields.io/crates/v/ct-codecs.svg)](https://crates.io/crates/ct-codecs)
 [![Documentation](https://docs.rs/ct-codecs/badge.svg)](https://docs.rs/ct-codecs)
 [![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/jedisct1/rust-ct-codecs/blob/master/LICENSE)
 
+## Overview
+
+This library provides constant-time encoding and decoding functions for Base64, Base32, and Hexadecimal formats. It is specifically designed for cryptographic applications where timing side-channel attacks are a concern.
+
 ## Features
 
-- **Constant-time implementation**: Suitable for cryptographic applications where timing attacks are a concern
-- **Strict validation**: Base64 strings are not malleable, providing security for cryptographic applications
-- **Multiple variants**: Supports standard Base64, URL-safe Base64, both with and without padding
-- **Character filtering**: Supports ignoring specific characters during decoding (useful for whitespace/newlines)
+- **Constant-time implementation**: Resistant to timing side-channel attacks
+- **Multiple codec formats**:
+  - **Base64**: Standard and URL-safe variants, with and without padding
+  - **Base32**: Standard and Hex variants, with and without padding
+  - **Hexadecimal**: Lowercase hex encoding and decoding
+- **Strict validation**: Non-malleable strings for enhanced security
+- **Character filtering**: Optional ignoring of specific characters during decoding (whitespace, etc.)
 - **Zero dependencies**: No external crates required
 - **`no_std` compatible**: Works in environments without the standard library
 - **Memory safety**: No unsafe code (`#![forbid(unsafe_code)]`)
@@ -22,7 +29,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-ct-codecs = "1.1.3"
+ct-codecs = "1"
 ```
 
 ## Usage Examples
@@ -47,22 +54,47 @@ let decoded = Base64::decode_to_vec(&encoded_with_whitespace, Some(b" \t\n"))?;
 assert_eq!(decoded, data);
 ```
 
-### URL-safe Base64 Encoding/Decoding
+### Base64 Variants
 
 ```rust
-use ct_codecs::{Base64UrlSafe, Base64UrlSafeNoPadding, Decoder, Encoder};
+use ct_codecs::{Base64, Base64NoPadding, Base64UrlSafe, Base64UrlSafeNoPadding, Decoder, Encoder};
+
+let data = b"Hello, world!";
+
+// Standard Base64 with padding
+let encoded1 = Base64::encode_to_string(data)?;
+assert_eq!(encoded1, "SGVsbG8sIHdvcmxkIQ==");
+
+// Standard Base64 without padding
+let encoded2 = Base64NoPadding::encode_to_string(data)?;
+assert_eq!(encoded2, "SGVsbG8sIHdvcmxkIQ");
 
 // URL-safe Base64 with padding
-let data = b"Hello, world!";
-let encoded = Base64UrlSafe::encode_to_string(data)?;
-assert_eq!(encoded, "SGVsbG8sIHdvcmxkIQ==");
+let encoded3 = Base64UrlSafe::encode_to_string(data)?;
+assert_eq!(encoded3, "SGVsbG8sIHdvcmxkIQ==");
 
 // URL-safe Base64 without padding
-let encoded_no_padding = Base64UrlSafeNoPadding::encode_to_string(data)?;
-assert_eq!(encoded_no_padding, "SGVsbG8sIHdvcmxkIQ");
+let encoded4 = Base64UrlSafeNoPadding::encode_to_string(data)?;
+assert_eq!(encoded4, "SGVsbG8sIHdvcmxkIQ");
+```
+
+### Base32 Encoding/Decoding
+
+```rust
+use ct_codecs::{Base32, Base32Hex, Decoder, Encoder};
+
+let data = b"Hello";
+
+// Standard Base32 with padding
+let encoded = Base32::encode_to_string(data)?;
+assert_eq!(encoded, "JBSWY3DP");
+
+// Base32Hex variant
+let encoded_hex = Base32Hex::encode_to_string(data)?;
+assert_eq!(encoded_hex, "91IMOR3F");
 
 // Decoding
-let decoded = Base64UrlSafeNoPadding::decode_to_vec(&encoded_no_padding, None)?;
+let decoded = Base32::decode_to_vec(&encoded, None)?;
 assert_eq!(decoded, data);
 ```
 
@@ -103,7 +135,19 @@ The library uses a simple error type with two variants:
 
 ## Security Considerations
 
-All operations are implemented to run in constant time relative to the input length, which helps prevent timing side-channel attacks. This makes the library suitable for handling sensitive cryptographic material.
+### Constant-Time Operations
+
+All operations in this library are implemented to run in constant time relative to the input length, which helps prevent timing side-channel attacks. This makes it suitable for handling sensitive cryptographic material where traditional implementations might leak information about the data being processed.
+
+### Implementation Details
+
+- No branches dependent on secret data
+- No table lookups indexed by secret data
+- Careful implementation of character validation
+
+### Strict Validation
+
+The decoders apply strict validation rules to prevent malleability, making them suitable for cryptographic applications where data integrity is crucial.
 
 ## License
 
