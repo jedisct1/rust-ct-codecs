@@ -211,6 +211,7 @@ pub trait Decoder {
 /// # Returns
 ///
 /// * `bool` - `true` if the slices are equal, `false` otherwise
+#[inline(never)]
 pub fn verify(x: &[u8], y: &[u8]) -> bool {
     if x.len() != y.len() {
         return false;
