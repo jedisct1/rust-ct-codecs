@@ -488,6 +488,7 @@ fn test_base64_no_std() {
     assert_eq!(bin, bin2);
 }
 
+#[cfg(feature = "std")]
 #[test]
 fn test_base64_invalid_padding() {
     let valid_padding = "AA==";
