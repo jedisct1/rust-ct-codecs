@@ -1,13 +1,14 @@
 //! # CT-Codecs
 //!
-//! A Rust implementation of constant-time Base64 and Hexadecimal codecs,
+//! A Rust implementation of constant-time Base64, Base32, and Hexadecimal codecs,
 //! reimplemented from libsodium and libhydrogen.
 //!
 //! ## Features
 //!
 //! - **Constant-time implementation** for cryptographic applications where timing attacks are a concern
-//! - **Strict validation** ensuring Base64 strings are not malleable
+//! - **Strict validation** ensuring encoded strings are not malleable
 //! - **Multiple variants** of Base64: standard, URL-safe, with and without padding
+//! - **Multiple variants** of Base32: standard and hexadecimal alphabets, with and without padding
 //! - **Character filtering** for ignoring specific characters during decoding (like whitespace)
 //! - **Zero dependencies** and **`no_std` compatible**
 //! - **Memory safety** with `#![forbid(unsafe_code)]`
@@ -37,6 +38,34 @@
 //!     let encoded = "SGVsbG8sIHdvcmxkIQ==";
 //!     let decoded = Base64::decode_to_vec(encoded, None)?;
 //!     assert_eq!(decoded, b"Hello, world!");
+//!     Ok(())
+//! }
+//! # example().unwrap();
+//! ```
+//!
+//! ### Base32 Encoding
+//!
+//! ```
+//! use ct_codecs::{Base32, Encoder};
+//!
+//! fn example() -> Result<(), ct_codecs::Error> {
+//!     let data = b"foobar";
+//!     let encoded = Base32::encode_to_string(data)?;
+//!     assert_eq!(encoded, "MZXW6YTBOI======");
+//!     Ok(())
+//! }
+//! # example().unwrap();
+//! ```
+//!
+//! ### Base32 Decoding
+//!
+//! ```
+//! use ct_codecs::{Base32, Decoder};
+//!
+//! fn example() -> Result<(), ct_codecs::Error> {
+//!     let encoded = "MZXW6YTBOI======";
+//!     let decoded = Base32::decode_to_vec(encoded, None)?;
+//!     assert_eq!(decoded, b"foobar");
 //!     Ok(())
 //! }
 //! # example().unwrap();
@@ -78,10 +107,12 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![forbid(unsafe_code)]
 
+mod base32;
 mod base64;
 mod error;
 mod hex;
 
+pub use base32::*;
 pub use base64::*;
 pub use error::*;
 pub use hex::*;

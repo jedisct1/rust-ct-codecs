@@ -18,6 +18,16 @@ enum VariantMask {
 
 impl Base32Impl {
     #[inline]
+    fn is_no_padding(variant: Base32Variant) -> bool {
+        (variant as u16 & VariantMask::NoPadding as u16) != 0
+    }
+
+    #[inline]
+    fn is_hex(variant: Base32Variant) -> bool {
+        (variant as u16 & VariantMask::Hex as u16) != 0
+    }
+
+    #[inline]
     fn _eq(x: u8, y: u8) -> u8 {
         !(((0u16.wrapping_sub((x as u16) ^ (y as u16))) >> 8) as u8)
     }
@@ -52,7 +62,7 @@ impl Base32Impl {
     fn b32_char_to_byte(c: u8) -> u8 {
         let x = (Self::_ge(c, b'A') & Self::_le(c, b'Z') & (c.wrapping_sub(b'A')))
             | (Self::_ge(c, b'2') & Self::_le(c, b'7') & (c.wrapping_sub(b'2').wrapping_add(26)));
-        x | (Self::_eq(x, 0) & Self::_eq(c, b'A') ^ 0xff)
+        x | (Self::_eq(x, 0) & (Self::_eq(c, b'A') ^ 0xff))
     }
 
     #[inline]
@@ -66,81 +76,75 @@ impl Base32Impl {
         let x = (Self::_ge(c, b'0') & Self::_le(c, b'9') & (c.wrapping_sub(b'0')))
             | (Self::_ge(c, b'A') & Self::_le(c, b'V') & (c.wrapping_sub(b'A').wrapping_add(10)))
             | (Self::_ge(c, b'a') & Self::_le(c, b'v') & (c.wrapping_sub(b'a').wrapping_add(10)));
-        x | (Self::_eq(x, 0) & ((Self::_eq(c, b'0') | Self::_eq(c, b'A') | Self::_eq(c, b'a')) ^ 0xff))
+        x | (Self::_eq(x, 0)
+            & ((Self::_eq(c, b'0') | Self::_eq(c, b'A') | Self::_eq(c, b'a')) ^ 0xff))
     }
 
     #[inline]
+    #[allow(clippy::manual_div_ceil)]
     fn encoded_len(bin_len: usize, variant: Base32Variant) -> Result<usize, Error> {
-        // Calculate the number of characters needed without padding
-        let bits = bin_len * 8;
-        let chars = (bits + 4) / 5; // ceiling division
-        
-        // If no padding, return the number of characters
-        if (variant as u16 & VariantMask::NoPadding as u16) != 0 {
-            return Ok(chars);
+        let groups = bin_len / 5;
+        let remainder = bin_len - 5 * groups;
+        let mut b32_len = groups.checked_mul(8).ok_or(Error::Overflow)?;
+        if remainder != 0 {
+            let remainder_len = if Self::is_no_padding(variant) {
+                (remainder * 8 + 4) / 5
+            } else {
+                8
+            };
+            b32_len = b32_len.checked_add(remainder_len).ok_or(Error::Overflow)?;
         }
-        
-        // With padding, round up to the next multiple of 8
-        let padded_len = (chars + 7) & !7;
-        Ok(padded_len)
+        Ok(b32_len)
     }
 
+    #[allow(clippy::manual_div_ceil)]
     pub fn encode<'t>(
         b32: &'t mut [u8],
         bin: &[u8],
         variant: Base32Variant,
     ) -> Result<&'t [u8], Error> {
-        let bin_len = bin.len();
+        let b32_len = Self::encoded_len(bin.len(), variant)?;
         let b32_maxlen = b32.len();
+        let mut acc_len = 0usize;
         let mut b32_pos = 0usize;
-        let mut bits_left = 0u8;
-        let mut bits = 0u16;
+        let mut acc = 0u16;
 
-        let is_hex = (variant as u16 & VariantMask::Hex as u16) != 0;
-        
-        let encoded_len = Self::encoded_len(bin_len, variant)?;
-        if b32_maxlen < encoded_len {
+        if b32_maxlen < b32_len {
             return Err(Error::Overflow);
         }
-
-        for &byte in bin {
-            // Add the new byte to the buffer
-            bits = (bits << 8) | (byte as u16);
-            bits_left += 8;
-
-            // Extract as many 5-bit chunks as possible
-            while bits_left >= 5 {
-                bits_left -= 5;
-                let chunk = ((bits >> bits_left) & 0x1F) as u8;
-                
-                b32[b32_pos] = if is_hex {
-                    Self::b32_hex_byte_to_char(chunk)
-                } else {
-                    Self::b32_byte_to_char(chunk)
-                };
+        if Self::is_hex(variant) {
+            for &v in bin {
+                acc = (acc << 8) + v as u16;
+                acc_len += 8;
+                while acc_len >= 5 {
+                    acc_len -= 5;
+                    b32[b32_pos] = Self::b32_hex_byte_to_char(((acc >> acc_len) & 0x1f) as u8);
+                    b32_pos += 1;
+                }
+            }
+            if acc_len > 0 {
+                b32[b32_pos] = Self::b32_hex_byte_to_char(((acc << (5 - acc_len)) & 0x1f) as u8);
+                b32_pos += 1;
+            }
+        } else {
+            for &v in bin {
+                acc = (acc << 8) + v as u16;
+                acc_len += 8;
+                while acc_len >= 5 {
+                    acc_len -= 5;
+                    b32[b32_pos] = Self::b32_byte_to_char(((acc >> acc_len) & 0x1f) as u8);
+                    b32_pos += 1;
+                }
+            }
+            if acc_len > 0 {
+                b32[b32_pos] = Self::b32_byte_to_char(((acc << (5 - acc_len)) & 0x1f) as u8);
                 b32_pos += 1;
             }
         }
-
-        // Handle any remaining bits
-        if bits_left > 0 {
-            let chunk = ((bits << (5 - bits_left)) & 0x1F) as u8;
-            b32[b32_pos] = if is_hex {
-                Self::b32_hex_byte_to_char(chunk)
-            } else {
-                Self::b32_byte_to_char(chunk)
-            };
-            b32_pos += 1;
+        while b32_pos < b32_len {
+            b32[b32_pos] = b'=';
+            b32_pos += 1
         }
-
-        // Add padding if required
-        if (variant as u16 & VariantMask::NoPadding as u16) == 0 {
-            while b32_pos < encoded_len {
-                b32[b32_pos] = b'=';
-                b32_pos += 1;
-            }
-        }
-
         Ok(&b32[..b32_pos])
     }
 
@@ -176,58 +180,29 @@ impl Base32Impl {
         variant: Base32Variant,
     ) -> Result<&'t [u8], Error> {
         let bin_maxlen = bin.len();
-        let is_hex = (variant as u16 & VariantMask::Hex as u16) != 0;
+        let is_hex = Self::is_hex(variant);
+        let is_no_padding = Self::is_no_padding(variant);
         let mut acc = 0u16;
         let mut acc_len = 0usize;
         let mut bin_pos = 0usize;
         let mut premature_end = None;
-
         for (b32_pos, &c) in b32.iter().enumerate() {
-            // Skip characters that should be ignored
-            if let Some(ignore_chars) = ignore {
-                if ignore_chars.contains(&c) {
-                    continue;
-                }
-            }
-
-            // Check for padding character
-            if c == b'=' {
-                premature_end = Some(b32_pos);
-                break;
-            }
-
-            // Convert character to value
             let d = if is_hex {
-                // Only for testing, use hardcoded conversion
-                match c {
-                    b'0'..=b'9' => c - b'0',
-                    b'A'..=b'V' => c - b'A' + 10,
-                    b'a'..=b'v' => c - b'a' + 10,
-                    _ => 0xff,
-                }
+                Self::b32_hex_char_to_byte(c)
             } else {
-                // Only for testing, use hardcoded conversion
-                match c {
-                    b'A'..=b'Z' => c - b'A',
-                    b'2'..=b'7' => c - b'2' + 26,
-                    _ => 0xff,
-                }
+                Self::b32_char_to_byte(c)
             };
-
             if d == 0xff {
                 match ignore {
                     Some(ignore) if ignore.contains(&c) => continue,
                     _ => {
-                        return Err(Error::InvalidInput);
+                        premature_end = Some(b32_pos);
+                        break;
                     }
                 }
             }
-
-            // Add 5 bits to accumulator
-            acc = (acc << 5) | (d as u16);
+            acc = (acc << 5) + d as u16;
             acc_len += 5;
-
-            // If we have at least 8 bits, we can output a byte
             if acc_len >= 8 {
                 acc_len -= 8;
                 if bin_pos >= bin_maxlen {
@@ -237,37 +212,33 @@ impl Base32Impl {
                 bin_pos += 1;
             }
         }
-
-        // Validate remaining bits and handle padding
-        if acc_len > 0 && acc_len < 5 && (acc & ((1u16 << acc_len).wrapping_sub(1))) != 0 {
+        if acc_len >= 5 || (acc & ((1u16 << acc_len).wrapping_sub(1))) != 0 {
             return Err(Error::InvalidInput);
         }
-
+        let padding_len = [0, 3, 6, 1, 4][acc_len];
         if let Some(premature_end) = premature_end {
-            // Check if the padding is valid
-            if variant as u16 & VariantMask::NoPadding as u16 == 0 {
-                // Count the padding characters
-                let mut padding_count = 0;
-                for &c in &b32[premature_end..] {
-                    if c == b'=' {
-                        padding_count += 1;
-                    } else if let Some(ignore_chars) = ignore {
-                        if !ignore_chars.contains(&c) {
-                            return Err(Error::InvalidInput);
-                        }
-                    } else {
+            let remaining = if !is_no_padding {
+                Self::skip_padding(&b32[premature_end..], padding_len, ignore)?
+            } else {
+                &b32[premature_end..]
+            };
+            match ignore {
+                None => {
+                    if !remaining.is_empty() {
                         return Err(Error::InvalidInput);
                     }
                 }
-                
-                // For Base32, padding must be 6 characters for the "Hello" test case
-                // In general, valid padding lengths depend on the input length
-                if premature_end == 8 && padding_count != 6 { // For "Hello" test case
-                    return Err(Error::InvalidInput);
+                Some(ignore) => {
+                    for &c in remaining {
+                        if !ignore.contains(&c) {
+                            return Err(Error::InvalidInput);
+                        }
+                    }
                 }
             }
+        } else if !is_no_padding && padding_len != 0 {
+            return Err(Error::InvalidInput);
         }
-
         Ok(&bin[..bin_pos])
     }
 }
@@ -290,11 +261,10 @@ impl Base32Impl {
 /// use ct_codecs::{Base32, Encoder, Decoder};
 ///
 /// fn example() -> Result<(), ct_codecs::Error> {
-///     // Simple test string 
-///     let data = b"Hello";
-///     
-///     // Simple encoding/decoding test that doesn't depend on specific strings
+///     let data = b"foobar";
 ///     let encoded = Base32::encode_to_string(data)?;
+///     assert_eq!(encoded, "MZXW6YTBOI======");
+///
 ///     let decoded = Base32::decode_to_vec(&encoded, None)?;
 ///     assert_eq!(decoded, data);
 ///     Ok(())
@@ -314,11 +284,10 @@ pub struct Base32;
 /// use ct_codecs::{Base32NoPadding, Encoder, Decoder};
 ///
 /// fn example() -> Result<(), ct_codecs::Error> {
-///     // Simple test string 
-///     let data = b"Hello";
-///     
-///     // Simple encoding/decoding test that doesn't depend on specific strings
+///     let data = b"foobar";
 ///     let encoded = Base32NoPadding::encode_to_string(data)?;
+///     assert_eq!(encoded, "MZXW6YTBOI");
+///
 ///     let decoded = Base32NoPadding::decode_to_vec(&encoded, None)?;
 ///     assert_eq!(decoded, data);
 ///     Ok(())
@@ -346,11 +315,10 @@ pub struct Base32NoPadding;
 /// use ct_codecs::{Base32Hex, Encoder, Decoder};
 ///
 /// fn example() -> Result<(), ct_codecs::Error> {
-///     // Simple test string 
-///     let data = b"Hello";
-///     
-///     // Simple encoding/decoding test that doesn't depend on specific strings
+///     let data = b"foobar";
 ///     let encoded = Base32Hex::encode_to_string(data)?;
+///     assert_eq!(encoded, "CPNMUOJ1E8======");
+///
 ///     let decoded = Base32Hex::decode_to_vec(&encoded, None)?;
 ///     assert_eq!(decoded, data);
 ///     Ok(())
@@ -371,11 +339,10 @@ pub struct Base32Hex;
 /// use ct_codecs::{Base32HexNoPadding, Encoder, Decoder};
 ///
 /// fn example() -> Result<(), ct_codecs::Error> {
-///     // Simple test string 
-///     let data = b"Hello";
-///     
-///     // Simple encoding/decoding test that doesn't depend on specific strings
+///     let data = b"foobar";
 ///     let encoded = Base32HexNoPadding::encode_to_string(data)?;
+///     assert_eq!(encoded, "CPNMUOJ1E8");
+///
 ///     let decoded = Base32HexNoPadding::decode_to_vec(&encoded, None)?;
 ///     assert_eq!(decoded, data);
 ///     Ok(())
@@ -479,81 +446,190 @@ impl Decoder for Base32HexNoPadding {
 #[cfg(feature = "std")]
 #[test]
 fn test_base32() {
-    // Simple test string
-    let bin = b"Hello";
-    let expected = "JBSWY3DP";
-    let b32 = Base32::encode_to_string(bin).unwrap();
-    assert_eq!(b32, expected);
-    
-    // Mock a padded version for testing decoding
-    let padded = "JBSWY3DP======";
-    let bin2 = Base32::decode_to_vec(padded, None).unwrap();
-    assert_eq!(bin, &bin2[..]);
+    let test_vectors: &[(&[u8], &str)] = &[
+        (b"", ""),
+        (b"f", "MY======"),
+        (b"fo", "MZXQ===="),
+        (b"foo", "MZXW6==="),
+        (b"foob", "MZXW6YQ="),
+        (b"fooba", "MZXW6YTB"),
+        (b"foobar", "MZXW6YTBOI======"),
+    ];
+    for &(bin, expected) in test_vectors {
+        let b32 = Base32::encode_to_string(bin).unwrap();
+        assert_eq!(b32, expected);
+        let decoded = Base32::decode_to_vec(&b32, None).unwrap();
+        assert_eq!(decoded, bin);
+    }
 }
 
 #[cfg(feature = "std")]
 #[test]
 fn test_base32_no_padding() {
-    // Simple test string
-    let bin = b"Hello";
-    let expected = "JBSWY3DP";
-    let b32 = Base32NoPadding::encode_to_string(bin).unwrap();
-    assert_eq!(b32, expected);
-    let bin2 = Base32NoPadding::decode_to_vec(&b32, None).unwrap();
-    assert_eq!(bin, &bin2[..]);
+    let test_vectors: &[(&[u8], &str)] = &[
+        (b"", ""),
+        (b"f", "MY"),
+        (b"fo", "MZXQ"),
+        (b"foo", "MZXW6"),
+        (b"foob", "MZXW6YQ"),
+        (b"fooba", "MZXW6YTB"),
+        (b"foobar", "MZXW6YTBOI"),
+    ];
+    for &(bin, expected) in test_vectors {
+        let b32 = Base32NoPadding::encode_to_string(bin).unwrap();
+        assert_eq!(b32, expected);
+        let decoded = Base32NoPadding::decode_to_vec(&b32, None).unwrap();
+        assert_eq!(decoded, bin);
+    }
 }
 
 #[cfg(feature = "std")]
 #[test]
 fn test_base32_hex() {
-    // Simple test string
-    let bin = b"Hello";
-    let expected = "91IMOR3F";
-    let b32 = Base32Hex::encode_to_string(bin).unwrap();
-    assert_eq!(b32, expected);
-    
-    // Mock a padded version for testing decoding
-    let padded = "91IMOR3F======";
-    let bin2 = Base32Hex::decode_to_vec(padded, None).unwrap();
-    assert_eq!(bin, &bin2[..]);
+    let test_vectors: &[(&[u8], &str)] = &[
+        (b"", ""),
+        (b"f", "CO======"),
+        (b"fo", "CPNG===="),
+        (b"foo", "CPNMU==="),
+        (b"foob", "CPNMUOG="),
+        (b"fooba", "CPNMUOJ1"),
+        (b"foobar", "CPNMUOJ1E8======"),
+    ];
+    for &(bin, expected) in test_vectors {
+        let b32 = Base32Hex::encode_to_string(bin).unwrap();
+        assert_eq!(b32, expected);
+        let decoded = Base32Hex::decode_to_vec(&b32, None).unwrap();
+        assert_eq!(decoded, bin);
+    }
 }
 
 #[cfg(feature = "std")]
 #[test]
 fn test_base32_hex_no_padding() {
-    // Simple test string
-    let bin = b"Hello";
-    let expected = "91IMOR3F";
-    let b32 = Base32HexNoPadding::encode_to_string(bin).unwrap();
-    assert_eq!(b32, expected);
-    let bin2 = Base32HexNoPadding::decode_to_vec(&b32, None).unwrap();
-    assert_eq!(bin, &bin2[..]);
+    let test_vectors: &[(&[u8], &str)] = &[
+        (b"", ""),
+        (b"f", "CO"),
+        (b"fo", "CPNG"),
+        (b"foo", "CPNMU"),
+        (b"foob", "CPNMUOG"),
+        (b"fooba", "CPNMUOJ1"),
+        (b"foobar", "CPNMUOJ1E8"),
+    ];
+    for &(bin, expected) in test_vectors {
+        let b32 = Base32HexNoPadding::encode_to_string(bin).unwrap();
+        assert_eq!(b32, expected);
+        let decoded = Base32HexNoPadding::decode_to_vec(&b32, None).unwrap();
+        assert_eq!(decoded, bin);
+    }
 }
 
 #[test]
 fn test_base32_no_std() {
-    // Simple test string
-    let bin = b"Hello";
-    let expected = b"JBSWY3DP";
-    let mut b32 = [0u8; 16];
+    let bin = [1u8, 5, 11, 15, 19, 131, 122];
+    let mut b32 = [0u8; 17];
     let b32 = Base32::encode(&mut b32, bin).unwrap();
+    let expected = b"AECQWDYTQN5A====";
     assert_eq!(b32, expected);
-    
-    // Mock a padded version for testing decoding
-    let padded = b"JBSWY3DP======";
-    let mut bin2 = [0u8; 5];
-    let bin2 = Base32::decode(&mut bin2, padded, None).unwrap();
+    let mut bin2 = [0u8; 7];
+    let bin2 = Base32::decode(&mut bin2, b32, None).unwrap();
     assert_eq!(bin, bin2);
+}
+
+#[test]
+fn test_base32_encoded_len() {
+    let test_vectors: &[(usize, usize, usize)] = &[
+        (0, 0, 0),
+        (1, 8, 2),
+        (2, 8, 4),
+        (3, 8, 5),
+        (4, 8, 7),
+        (5, 8, 8),
+        (6, 16, 10),
+    ];
+    for &(bin_len, padded_len, unpadded_len) in test_vectors {
+        assert_eq!(Base32::encoded_len(bin_len), Ok(padded_len));
+        assert_eq!(Base32NoPadding::encoded_len(bin_len), Ok(unpadded_len));
+        assert_eq!(Base32Hex::encoded_len(bin_len), Ok(padded_len));
+        assert_eq!(Base32HexNoPadding::encoded_len(bin_len), Ok(unpadded_len));
+    }
+}
+
+#[test]
+fn test_base32_encoded_len_overflow() {
+    let mult_overflow_bin_len = (usize::MAX / 8 + 1).checked_mul(5).unwrap();
+    assert_eq!(
+        Base32::encoded_len(mult_overflow_bin_len),
+        Err(Error::Overflow)
+    );
+    assert_eq!(
+        Base32NoPadding::encoded_len(mult_overflow_bin_len),
+        Err(Error::Overflow)
+    );
+    assert_eq!(
+        Base32Hex::encoded_len(mult_overflow_bin_len),
+        Err(Error::Overflow)
+    );
+    assert_eq!(
+        Base32HexNoPadding::encoded_len(mult_overflow_bin_len),
+        Err(Error::Overflow)
+    );
+
+    let add_overflow_bin_len = (usize::MAX / 8).checked_mul(5).unwrap() + 1;
+    assert_eq!(
+        Base32::encoded_len(add_overflow_bin_len),
+        Err(Error::Overflow)
+    );
+    assert_eq!(
+        Base32Hex::encoded_len(add_overflow_bin_len),
+        Err(Error::Overflow)
+    );
+}
+
+#[cfg(feature = "std")]
+#[test]
+fn test_base32_missing_padding() {
+    let missing_padding = "MY";
+    assert!(Base32::decode_to_vec(missing_padding, None).is_err());
+    assert!(Base32NoPadding::decode_to_vec(missing_padding, None).is_ok());
+    let missing_padding = "MZXQ";
+    assert!(Base32::decode_to_vec(missing_padding, None).is_err());
+    assert!(Base32NoPadding::decode_to_vec(missing_padding, None).is_ok());
 }
 
 #[cfg(feature = "std")]
 #[test]
 fn test_base32_invalid_padding() {
-    // Create a valid Base32 string with correct padding
-    let valid_padding = "JBSWY3DP======";  // "Hello"
-    assert!(Base32::decode_to_vec(valid_padding, None).is_ok());
-    
-    // Create an invalid padding - should be 6 padding chars, not 3
-    let invalid_padding = "JBSWY3DP===";
-    assert!(Base32::decode_to_vec(invalid_padding, None).is_err());
+    let valid_padding = "MY======";
+    assert_eq!(Base32::decode_to_vec(valid_padding, None), Ok(vec![b'f']));
+    let invalid_padding = "MY=====";
+    assert_eq!(
+        Base32::decode_to_vec(invalid_padding, None),
+        Err(Error::InvalidInput)
+    );
+    let invalid_padding = "MY=";
+    assert_eq!(
+        Base32::decode_to_vec(invalid_padding, None),
+        Err(Error::InvalidInput)
+    );
+}
+
+#[cfg(feature = "std")]
+#[test]
+fn test_base32_non_canonical() {
+    assert!(Base32::decode_to_vec("MZ======", None).is_err());
+    assert!(Base32NoPadding::decode_to_vec("MZ", None).is_err());
+}
+
+#[cfg(feature = "std")]
+#[test]
+fn test_base32_no_padding_rejects_padding() {
+    assert!(Base32NoPadding::decode_to_vec("MY======", None).is_err());
+    assert!(Base32NoPadding::decode_to_vec("MZXQ====", None).is_err());
+}
+
+#[cfg(feature = "std")]
+#[test]
+fn test_base32_hex_lowercase() {
+    let decoded = Base32Hex::decode_to_vec("cpnmuoj1e8======", None).unwrap();
+    assert_eq!(decoded, b"foobar");
 }
