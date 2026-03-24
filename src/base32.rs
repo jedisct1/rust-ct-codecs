@@ -74,10 +74,8 @@ impl Base32Impl {
     #[inline]
     fn b32_hex_char_to_byte(c: u8) -> u8 {
         let x = (Self::_ge(c, b'0') & Self::_le(c, b'9') & (c.wrapping_sub(b'0')))
-            | (Self::_ge(c, b'A') & Self::_le(c, b'V') & (c.wrapping_sub(b'A').wrapping_add(10)))
-            | (Self::_ge(c, b'a') & Self::_le(c, b'v') & (c.wrapping_sub(b'a').wrapping_add(10)));
-        x | (Self::_eq(x, 0)
-            & ((Self::_eq(c, b'0') | Self::_eq(c, b'A') | Self::_eq(c, b'a')) ^ 0xff))
+            | (Self::_ge(c, b'A') & Self::_le(c, b'V') & (c.wrapping_sub(b'A').wrapping_add(10)));
+        x | (Self::_eq(x, 0) & ((Self::_eq(c, b'0') | Self::_eq(c, b'A')) ^ 0xff))
     }
 
     #[inline]
@@ -629,7 +627,7 @@ fn test_base32_no_padding_rejects_padding() {
 
 #[cfg(feature = "std")]
 #[test]
-fn test_base32_hex_lowercase() {
-    let decoded = Base32Hex::decode_to_vec("cpnmuoj1e8======", None).unwrap();
-    assert_eq!(decoded, b"foobar");
+fn test_base32_hex_rejects_lowercase() {
+    assert!(Base32Hex::decode_to_vec("cpnmuoj1e8======", None).is_err());
+    assert!(Base32HexNoPadding::decode_to_vec("cpnmuoj1e8", None).is_err());
 }

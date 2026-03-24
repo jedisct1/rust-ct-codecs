@@ -17,7 +17,7 @@ This library provides constant-time encoding and decoding functions for Base64, 
   - **Base64**: Standard and URL-safe variants, with and without padding
   - **Base32**: Standard and Hex variants, with and without padding
   - **Hexadecimal**: Lowercase hex encoding and decoding
-- **Strict validation**: Non-malleable strings for enhanced security
+- **Strict validation**: Non-malleable strings with canonical alphabet enforcement by default
 - **Character filtering**: Optional ignoring of specific characters during decoding (whitespace, etc.)
 - **Zero dependencies**: No external crates required
 - **`no_std` compatible**: Works in environments without the standard library
@@ -147,7 +147,7 @@ All operations in this library are implemented to run in constant time relative 
 
 ### Strict Validation
 
-The decoders apply strict validation rules to prevent malleability, making them suitable for cryptographic applications where data integrity is crucial.
+The decoders apply strict validation rules to prevent malleability, making them suitable for cryptographic applications where data integrity is crucial. By default, each decoder requires the canonical alphabet for its selected variant and rejects non-canonical casing, invalid padding, and non-zero pad bits unless bytes are explicitly ignored via the `ignore` parameter.
 
 ## License
 

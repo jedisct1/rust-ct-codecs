@@ -6,7 +6,7 @@
 //! ## Features
 //!
 //! - **Constant-time implementation** for cryptographic applications where timing attacks are a concern
-//! - **Strict validation** ensuring encoded strings are not malleable
+//! - **Strict validation** ensuring encoded strings are not malleable and use canonical alphabets by default
 //! - **Multiple variants** of Base64: standard, URL-safe, with and without padding
 //! - **Multiple variants** of Base32: standard and hexadecimal alphabets, with and without padding
 //! - **Character filtering** for ignoring specific characters during decoding (like whitespace)
@@ -186,9 +186,15 @@ pub trait Encoder {
 /// Trait for decoding text representations back into binary data.
 ///
 /// Implementors of this trait provide constant-time decoding operations
-/// for a specific encoding format (Base64, Hex, etc.).
+/// for a specific encoding format (Base64, Hex, etc.). By default,
+/// decoders require the canonical alphabet for the selected variant;
+/// only bytes explicitly listed in `ignore` are skipped.
 pub trait Decoder {
     /// Decodes text data back into its binary representation.
+    ///
+    /// This method rejects non-canonical encodings, invalid padding,
+    /// and characters outside the selected variant's alphabet unless
+    /// they are explicitly listed in `ignore`.
     ///
     /// # Arguments
     ///

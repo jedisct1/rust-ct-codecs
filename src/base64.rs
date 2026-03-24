@@ -499,3 +499,17 @@ fn test_base64_invalid_padding() {
         Err(Error::InvalidInput)
     );
 }
+
+#[cfg(feature = "std")]
+#[test]
+fn test_base64_non_canonical() {
+    assert!(Base64::decode_to_vec("AB==", None).is_err());
+    assert!(Base64NoPadding::decode_to_vec("AB", None).is_err());
+}
+
+#[cfg(feature = "std")]
+#[test]
+fn test_base64_no_padding_rejects_padding() {
+    assert!(Base64NoPadding::decode_to_vec("AA==", None).is_err());
+    assert!(Base64NoPadding::decode_to_vec("AAA=", None).is_err());
+}
