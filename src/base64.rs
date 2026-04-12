@@ -85,10 +85,16 @@ impl Base64Impl {
         let nibbles = bin_len / 3;
         let rounded = nibbles * 3;
         let pad = bin_len - rounded;
-        Ok(nibbles.checked_mul(4).ok_or(Error::Overflow)?
-            + ((pad | (pad >> 1)) & 1)
-                * (4 - (!((((variant as usize) & 2) >> 1).wrapping_sub(1)) & (3 - pad)))
-            + 1)
+        let mut b64_len = nibbles.checked_mul(4).ok_or(Error::Overflow)?;
+        if pad != 0 {
+            let remainder_len = if (variant as u16 & VariantMask::NoPadding as u16) == 0 {
+                4
+            } else {
+                2 + (pad >> 1)
+            };
+            b64_len = b64_len.checked_add(remainder_len).ok_or(Error::Overflow)?;
+        }
+        Ok(b64_len)
     }
 
     pub fn encode<'t>(
