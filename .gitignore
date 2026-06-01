@@ -1,6 +1,4 @@
 *~
 /target
 Cargo.lock
-CLAUDE.md
-
-**/.claude/settings.local.json
+.swival/
