@@ -16,7 +16,7 @@ This library provides constant-time encoding and decoding functions for Base64, 
 - **Multiple codec formats**:
   - **Base64**: Standard and URL-safe variants, with and without padding
   - **Base32**: Standard and Hex variants, with and without padding
-  - **Hexadecimal**: Lowercase hex encoding and decoding
+  - **Hexadecimal**: Lowercase encoding, case-insensitive decoding
 - **Strict validation**: Non-malleable strings with canonical alphabet enforcement by default
 - **Character filtering**: Optional ignoring of specific characters during decoding (whitespace, etc.)
 - **Zero dependencies**: No external crates required

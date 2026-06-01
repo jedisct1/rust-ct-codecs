@@ -16,8 +16,9 @@ pub enum Error {
     /// The input isn't valid for the given encoding.
     ///
     /// This error occurs when:
-    /// - A Base64 string contains invalid characters
-    /// - A Base64 string has invalid padding
+    /// - A Base64 or Base32 string contains invalid characters
+    /// - A Base64 or Base32 string has invalid padding
+    /// - An encoded string is non-canonical (e.g. non-zero padding bits)
     /// - A hex string contains non-hexadecimal characters
     /// - A hex string has an odd length
     InvalidInput,
