@@ -10,6 +10,7 @@ homepage = "https://github.com/jedisct1/rust-ct-codecs"
 repository = "https://github.com/jedisct1/rust-ct-codecs"
 categories = ["no-std", "cryptography", "encoding"]
 readme = "README.md"
+include = ["src/**/*.rs", "README.md", "LICENSE"]
 
 [profile.release]
 codegen-units = 1
